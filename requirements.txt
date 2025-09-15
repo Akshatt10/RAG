@@ -1,0 +1,7 @@
+langchain
+langchain-openai
+pydantic
+langchain-core
+langchain-community
+pypdf
+pymupdf
