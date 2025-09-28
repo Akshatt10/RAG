@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
+from typing import Dict, Any
 from pydantic import BaseModel
 from typing import Optional
-from document import retriever 
+from document import retriever
 
 app = FastAPI()
 
@@ -27,3 +28,8 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    result = retriever.upload_document(file)
+    return result

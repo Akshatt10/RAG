@@ -11,6 +11,7 @@ from langchain_community.document_loaders import (
     TextLoader, UnstructuredMarkdownLoader, CSVLoader,
     JSONLoader, UnstructuredHTMLLoader
 )
+from fastapi import UploadFile
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import HumanMessage
@@ -143,6 +144,47 @@ class SimpleRAGSystem:
         )
         
         print(f"Added {len(chunks)} documents to vector store")
+        
+    def upload_document(self, file: UploadFile) -> Dict[str, Any]:
+        """Upload a single document and add it to the vector store."""
+        try:
+            # Save file temporarily in data folder
+            file_path = self.data_folder / file.filename
+            with open(file_path, "wb") as f:
+                f.write(file.file.read())
+            
+            # Load the document
+            docs = self._load_single_file(file_path)
+            if not docs:
+                return {"status": "error", "message": "Unsupported or empty file."}
+            
+            # Split into chunks
+            chunks = self.splitter.split_documents(docs)
+            texts = [chunk.page_content for chunk in chunks]
+            embeddings = self.embedding_model.encode(texts, show_progress_bar=False)
+            
+            # Prepare vectors
+            ids = [str(uuid.uuid4()) for _ in chunks]
+            metadatas = [chunk.metadata for chunk in chunks]
+            documents = texts
+            embeddings_list = [emb.tolist() for emb in embeddings]
+            
+            # Add to vector store
+            self.collection.add(
+                ids=ids,
+                embeddings=embeddings_list,
+                metadatas=metadatas,
+                documents=documents
+            )
+            
+            return {
+                "status": "success",
+                "file": file.filename,
+                "chunks_added": len(chunks)
+            }
+        
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
     
     def query(self, question: str, top_k: int = 5, min_score: float = 0.3, summarize: bool = True) -> Dict[str, Any]:
         """Query the knowledge base."""
@@ -262,6 +304,9 @@ class RAGRetriever:
     
     def query(self, question: str, top_k: int = 5, min_score: float = 0.3, **kwargs):
         return self.rag_system.query(question, top_k, min_score)
+    
+    def upload_document(self, file: UploadFile) -> Dict[str, Any]:
+        return self.rag_system.upload_document(file)
 
 # Create the retriever instance for your main.py
 retriever = RAGRetriever(rag_system)
