@@ -1,25 +1,29 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
-from document import AdvancedRAGPipeline, rag_retriever, llm  
-app = FastAPI()
+from document import retriever 
 
-adv_rag = AdvancedRAGPipeline(rag_retriever, llm)
+app = FastAPI()
 
 class RAGQuery(BaseModel):
     question: str
     top_k: Optional[int] = 5
-    min_score: Optional[float] = 0.2
-    stream: Optional[bool] = False
-    summarize: Optional[bool] = False
-
+    min_score: Optional[float] = 0.3
+    summarize: Optional[bool] = True
 @app.post("/query")
 async def query_rag(payload: RAGQuery):
-    result = adv_rag.query(
+    result = retriever.query(
         question=payload.question,
         top_k=payload.top_k,
         min_score=payload.min_score,
-        stream=payload.stream,
         summarize=payload.summarize
     )
-    return {"summary": result["summary"]}
+    return result
+
+@app.get("/")
+async def root():
+    return {"message": "RAG API is running! Put your documents in the 'data' folder."}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
