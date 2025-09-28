@@ -53,7 +53,7 @@ class SimpleRAGSystem:
         
         # Text splitter
         self.splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500, 
+            chunk_size=250, 
             chunk_overlap=50
         )
         
