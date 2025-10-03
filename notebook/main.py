@@ -27,14 +27,14 @@ class RAGQuery(BaseModel):
     top_k: Optional[int] = 5
     min_score: Optional[float] = 0.3
     summarize: Optional[bool] = True
-
+    
 @app.post("/query")
 async def query_rag(payload: RAGQuery):
     result = retriever.query(
         question=payload.question,
         top_k=payload.top_k,
         min_score=payload.min_score,
-        summarize=payload.summarize
+        summarize=payload.summarize,
     )
     return result
 

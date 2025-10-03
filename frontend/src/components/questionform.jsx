@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Send, Loader, Code, Settings } from 'lucide-react';
+import React, { useState } from "react";
+import { Search, Send, Loader, Code, Settings } from "lucide-react";
 
 export default function QuestionForm({ messages, setMessages }) {
   const [question, setQuestion] = useState("");
@@ -8,7 +8,7 @@ export default function QuestionForm({ messages, setMessages }) {
     summarize: true,
     developerMode: true,
     minScore: 0.4,
-    topK: 5
+    topK: 5,
   });
   const [showSettings, setShowSettings] = useState(false);
 
@@ -17,11 +17,17 @@ export default function QuestionForm({ messages, setMessages }) {
 
     const userMessage = {
       id: Date.now(),
-      type: 'user',
+      type: "user",
       content: question,
-      timestamp: new Date()
+      summary: null,
+      sources: [],
+      confidence: null,
+      queryType: "general",
+      timestamp: new Date(),
+      isError: false,
     };
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
+
     setLoading(true);
     setQuestion("");
 
@@ -30,7 +36,7 @@ export default function QuestionForm({ messages, setMessages }) {
       top_k: settings.topK,
       min_score: settings.minScore,
       summarize: settings.summarize,
-      developer_mode: settings.developerMode
+      developer_mode: settings.developerMode,
     };
 
     try {
@@ -44,35 +50,41 @@ export default function QuestionForm({ messages, setMessages }) {
 
       const data = await res.json();
 
-      // Split summary into clean bullet points
       const summaryPoints = data.summary
-        ? data.summary.split(/\n|\*|\-+/).filter(Boolean).map(s => s.trim())
+        ? data.summary
+            .split(/\n|\*|\-+/)
+            .filter(Boolean)
+            .map((s) => s.trim())
         : ["No summary available."];
 
       const botMessage = {
         id: Date.now() + 1,
-        type: 'bot',
-        content: summaryPoints, // store as array for rendering
-        timestamp: new Date()
+        type: "bot",
+        content: data.answer || ["No detailed answer."],
+        summary: summaryPoints,
+        sources: data.sources || [],
+        confidence: data.confidence || null,
+        queryType: data.query_type || "general",
+        timestamp: new Date(),
+        isError: false,
       };
-      setMessages(prev => [...prev, botMessage]);
-
+      setMessages((prev) => [...prev, botMessage]);
     } catch (err) {
       const errorMessage = {
         id: Date.now() + 1,
-        type: 'bot',
-        content: [`Error: ${err.message}`],
+        type: "bot",
+        content: [`❌ Error: ${err.message}`],
         isError: true,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleAsk();
     }
@@ -87,8 +99,12 @@ export default function QuestionForm({ messages, setMessages }) {
             <Search className="text-indigo-600" size={24} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-800">Ask Your Knowledge Base</h2>
-            <p className="text-sm text-gray-500">Get answers from your uploaded documents</p>
+            <h2 className="text-xl font-bold text-gray-800">
+              Ask Your Knowledge Base
+            </h2>
+            <p className="text-sm text-gray-500">
+              Get answers from your uploaded documents
+            </p>
           </div>
         </div>
         <button
@@ -98,13 +114,6 @@ export default function QuestionForm({ messages, setMessages }) {
           <Settings size={20} />
         </button>
       </div>
-
-      {/* Settings */}
-      {showSettings && (
-        <div className="bg-gradient-to-r from-gray-50 to-indigo-50 rounded-xl p-5 mb-6 border border-indigo-100">
-          {/* ... settings UI same as before ... */}
-        </div>
-      )}
 
       {/* Question Input */}
       <div className="flex gap-3">
@@ -142,27 +151,6 @@ export default function QuestionForm({ messages, setMessages }) {
           )}
         </button>
       </div>
-
-      {/* Display summary */}
-    {messages.map(msg => msg.type === 'bot' && (
-      <div key={msg.id} className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-        <ul className="list-disc list-inside space-y-1">
-          {Array.isArray(msg.content)
-            ? msg.content.map((point, idx) => <li key={idx} className="text-gray-800">{point}</li>)
-            : <li className="text-gray-800">{msg.content}</li>
-          }
-        </ul>
-      </div>
-    ))}
-
-      {settings.developerMode && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center gap-2 text-sm text-blue-700">
-            <Code size={14} />
-            <span>Developer mode active: Enhanced code formatting and technical responses</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
